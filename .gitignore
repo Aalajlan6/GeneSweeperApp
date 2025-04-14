@@ -1,1 +1,5 @@
 .venv/
+config.json
+output.*
+*.fasta
+*.pyc
