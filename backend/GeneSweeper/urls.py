@@ -15,21 +15,11 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-<<<<<<< HEAD:GeneSweeper/urls.py
 from django.urls import path, include
-from GeneSweeperWeb import views
 from django.contrib.auth import views as auth_views
-=======
-from django.urls import path
-from apps.views import home
->>>>>>> main:backend/GeneSweeper/urls.py
+from apps.api import views
 
 urlpatterns = [
-    path('', views.home, name='home'),
     path('admin/', admin.site.urls),
-    path('register/', views.register, name='register'),
-
-    path('sweep/', views.sweep_view, name='sweep'),
-    path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('api/upload-csv/', views.upload_csv, name='upload_csv'),
 ]

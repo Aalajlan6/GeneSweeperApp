@@ -8,51 +8,19 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.conf import settings
 from io import StringIO
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
-BASE_DIR = settings.BASE_DIR
-csv_file_path = os.path.join(BASE_DIR, 'CSV_files')
-
-all_products = []
-for file in os.listdir(csv_file_path):
-    if file.endswith(".csv"):
-        df = pd.read_csv(os.path.join(csv_file_path, file), delimiter='\t')
-        products = df['PRODUCT NAME'].unique()
-        all_products.extend(products)
-all_products = list(set(all_products))
-
-global_df = pd.concat(
-    pd.read_csv(os.path.join(csv_file_path, file), delimiter='\t') for file in os.listdir(csv_file_path) if file.endswith(".csv")
-)
-def home(request):
-    return render(request, 'about.html')
-
-
-def sweep_view(request):
+@csrf_exempt
+def upload_csv(request):
     if request.method == 'POST':
-        selected_products = request.POST.getlist('products')
-        if selected_products:
-            filtered_df = global_df[global_df['PRODUCT NAME'].str.lower().isin([p.lower() for p in selected_products])]
+        uploaded_file = request.FILES.get('csv_file')
+        if not uploaded_file:
+            return JsonResponse({'error': 'No file uploaded'}, status=400)
+        
+        df = pd.read_csv(uploaded_file, delimiter='\t')
 
-            # Create CSV in memory
-            csv_buffer = StringIO()
-            filtered_df.to_csv(csv_buffer, index=False)
-            csv_buffer.seek(0)
+        print(df.head(5))
 
-            # Send file directly without saving to disk
-            response = HttpResponse(csv_buffer, content_type='text/csv')
-            response['Content-Disposition'] = 'attachment; filename="sweep_output.csv"'
-            return response
-        else:
-            return render(request, 'sweep_page.html', {'products': all_products, 'error': 'Please select products.'})
-
-    return render(request, 'sweep_page.html', {'products': all_products})
-def register(request):
-    if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('login')
-    else:
-        form = UserCreationForm()
-    return render(request, 'register.html', {'form': form})
-
+        return JsonResponse({'message': 'File uploaded successfully'}, status=200)
+    return JsonResponse({'error': 'Only POST method allowed.'}, status=405)
