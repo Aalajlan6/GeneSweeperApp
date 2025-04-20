@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GeneSweeper - Sweep</title>
+</head>
+<body>
+    <h1>GeneSweeper</h1>
+    <h2>Select products to sweep:</h2>
+
+    {% if error %}
+        <p style="color:red;">{{ error }}</p>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <select name="products" multiple size="10">
+            {% for product in products %}
+                <option value="{{ product }}">{{ product }}</option>
+            {% endfor %}
+        </select>
+        <br><br>
+        <button type="submit">Sweep and Download</button>
+    </form>
+
+    <br><br>
+    <a href="{% url 'logout' %}">Logout</a>
+
+</body>
+</html>
