@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.forms import UserCreationForm
-
+from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 import os
 import pandas as pd
 from django.shortcuts import render, redirect
@@ -10,7 +11,9 @@ from django.conf import settings
 from io import StringIO
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from django.core.exceptions import ValidationError
 uploaded_dataframes = {}
 
 @csrf_exempt
@@ -59,3 +62,25 @@ def export_csv(request):
         return response
 
     return JsonResponse({'error': 'Only POST allowed'}, status=405)
+
+
+@api_view(['POST'])
+def register_user(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
+
+    if not username or not password:
+        return Response({'error': 'Username and password are required.'}, status=400)
+
+    if User.objects.filter(username=username).exists():
+        return Response({'error': 'Username already exists.'}, status=400)
+    
+    try:
+        validate_password(password)
+    except ValidationError as e:
+        return Response({'error': str(e)}, status=400)
+    
+    user = User.objects.create_user(username=username, password=password)
+
+    return Response({'message': 'User created successfully.'}, status=201)
+    
