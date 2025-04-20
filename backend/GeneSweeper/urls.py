@@ -15,9 +15,14 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+<<<<<<< HEAD:GeneSweeper/urls.py
 from django.urls import path, include
 from GeneSweeperWeb import views
 from django.contrib.auth import views as auth_views
+=======
+from django.urls import path
+from apps.views import home
+>>>>>>> main:backend/GeneSweeper/urls.py
 
 urlpatterns = [
     path('', views.home, name='home'),
