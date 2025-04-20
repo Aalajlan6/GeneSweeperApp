@@ -22,4 +22,5 @@ from apps.api import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/upload-csv/', views.upload_csv, name='upload_csv'),
+    path('api/export-csv/', views.export_csv, name='export_csv'),
 ]

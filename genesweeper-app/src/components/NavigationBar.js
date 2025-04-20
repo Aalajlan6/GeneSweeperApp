@@ -13,7 +13,7 @@ function NavigationBar() {
           <Link to="/about">About</Link>
         </li>
         <li>
-          <Link to="/contact">Contact</Link>
+          <Link to="/upload">Upload files</Link>
         </li>
       </ul>
     </nav>
