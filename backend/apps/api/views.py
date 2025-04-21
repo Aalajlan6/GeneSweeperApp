@@ -5,7 +5,7 @@ import pandas as pd
 from django.http import HttpResponse
 from django.conf import settings
 from io import StringIO
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -13,6 +13,10 @@ from django.core.exceptions import ValidationError
 from .serializers import SweepSerializer
 from .models import Sweep
 from rest_framework.permissions import IsAuthenticated
+import subprocess
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+import sys
 
 uploaded_dataframes = {}
 
@@ -119,3 +123,49 @@ def delete_sweep(request, sweep_id):
         return Response({'message': 'Sweep deleted successfully.'}, status=204)
     except Sweep.DoesNotExist:
         return Response({'error': 'Sweep not found.'}, status=404)
+
+@csrf_exempt
+def upload_and_scrape(request):
+    if request.method == 'POST':
+        uploaded_file = request.FILES.get('csv_file')
+        jgi_username = request.POST.get('jgi_username')
+        jgi_password = request.POST.get('jgi_password')
+
+        if not uploaded_file or not jgi_username or not jgi_password:
+            return JsonResponse({'error': 'Missing required fields: file, username, or password.'}, status=400)
+
+        # Save the uploaded file
+        file_path = default_storage.save(f'uploads/{uploaded_file.name}', ContentFile(uploaded_file.read()))
+
+        # Get the absolute path to multiscraper.py
+        script_path = os.path.join(os.path.dirname(__file__), '../../resources/multiscraper.py')
+
+        # Define the output file path
+        output_file_path = os.path.join(os.path.dirname(__file__), '../../resources/multioutput.fasta')
+
+        # Run multiscraper.py using the current Python interpreter
+        try:
+            subprocess.run(
+                [sys.executable, script_path, file_path, jgi_username, jgi_password],
+                check=True
+            )
+        except subprocess.CalledProcessError as e:
+            return JsonResponse({'error': f'Error running multiscraper: {str(e)}'}, status=500)
+
+        # Return the output file as a downloadable response
+        if os.path.exists(output_file_path):
+            return FileResponse(open(output_file_path, 'rb'), as_attachment=True, filename='multioutput.fasta')
+        else:
+            return JsonResponse({'error': 'Output file not found.'}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_external_credentials(request):
+    # Replace these with the actual credentials stored in your database or settings
+    external_credentials = {
+        'username': 'external_site_username',  # Replace with actual logic to fetch username
+        'password': 'external_site_password',  # Replace with actual logic to fetch password
+    }
+    return Response(external_credentials)
