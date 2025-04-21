@@ -5,6 +5,10 @@ class Sweep(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
     date = models.DateField(auto_now_add=True)
+    products_selected = models.TextField()  # Store selected products as a comma-separated string
+
+    def __str__(self):
+        return f"sweep by {self.user.username} on {self.date}"
 
 class SweepProduct(models.Model):
     sweep = models.ForeignKey(Sweep, related_name='products', on_delete=models.CASCADE)

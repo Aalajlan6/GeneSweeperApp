@@ -3,4 +3,4 @@ from django.apps import AppConfig
 
 class GenesweeperwebConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "GeneSweeperWeb"
+    name = "apps.api"
