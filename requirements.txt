@@ -1,0 +1,7 @@
+Django>=5.2
+djangorestframework>=3.14.0
+djangorestframework-simplejwt>=5.2.2
+pandas>=2.2.1
+requests>=2.31.0
+beautifulsoup4>=4.12.3
+django-cors-headers>=4.3.1
