@@ -8,8 +8,9 @@ function UploadCSV() {
     const [cart, setCart] = useState([]);
     const [file, setFile] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedProduct, setSelectedProduct] = useState('');
-    const [csvPreview, setCsvPreview] = useState([]); // State for CSV preview
+    const [csvData, setCsvData] = useState([]); // Full CSV data
+    const [csvPreview, setCsvPreview] = useState([]); // Filtered CSV preview
+    const [selectedProduct, setSelectedProduct] = useState(''); // State for the selected product
 
     const handleFileChange = (e) => {
         const uploadedFile = e.target.files[0];
@@ -20,7 +21,8 @@ function UploadCSV() {
             header: true, // Parse the CSV with headers
             skipEmptyLines: true,
             complete: (result) => {
-                setCsvPreview(result.data.slice(0, 10)); // Limit preview to 10 rows
+                setCsvData(result.data); // Store the full CSV data
+                setCsvPreview(result.data.slice(0, 10)); // Initially show the first 10 rows
             },
             error: (error) => {
                 console.error('Error parsing CSV:', error);
@@ -60,10 +62,15 @@ function UploadCSV() {
     const handleSearchChange = (e) => {
         const query = e.target.value;
         setSearchQuery(query);
-        const filtered = products.filter(product => 
-            product.toLowerCase().includes(query.toLowerCase())
+
+        // Filter CSV data based on the search query
+        const filtered = csvData.filter(row =>
+            Object.values(row).some(value =>
+                value.toString().toLowerCase().includes(query.toLowerCase())
+            )
         );
-        setFilteredProducts(filtered);
+
+        setCsvPreview(filtered.slice(0, 10)); // Update the preview with filtered rows (limit to 10)
     };
 
     const handleProductSelect = (e) => {
@@ -103,17 +110,17 @@ function UploadCSV() {
             axios.post('http://127.0.0.1:8000/api/save-sweep/', {
                 products: cart,
                 name: name
-              }, {
+            }, {
                 headers: {
-                  Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+                    Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
                 }
-              })
-              .then(res => {
+            })
+            .then(res => {
                 console.log('Sweep saved successfully:', res.data);
-              })
-              .catch(err => {
+            })
+            .catch(err => {
                 console.error('Error saving sweep:', err);
-              });
+            });
 
         })
         .catch(error => {
@@ -146,6 +153,25 @@ function UploadCSV() {
                 </button>
             )}
 
+            {/* Search Input */}
+            {csvData.length > 0 && (
+                <div style={{ marginTop: '20px', width: '80%' }}>
+                    <input
+                        type="text"
+                        placeholder="Search..."
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        style={{
+                            width: '100%',
+                            padding: '10px',
+                            marginBottom: '10px',
+                            border: '1px solid #ccc',
+                            borderRadius: '5px',
+                        }}
+                    />
+                </div>
+            )}
+
             {/* CSV Preview Section */}
             {csvPreview.length > 0 && (
                 <div
@@ -160,7 +186,7 @@ function UploadCSV() {
                         backgroundColor: '#f9f9f9',
                     }}
                 >
-                    <h3 style={{ textAlign: 'center' }}>CSV Preview (First 10 Rows)</h3>
+                    <h3 style={{ textAlign: 'center' }}>Table Preview</h3>
                     <table
                         border="1"
                         style={{
@@ -198,6 +224,12 @@ function UploadCSV() {
                             ))}
                         </tbody>
                     </table>
+                </div>
+            )}
+
+            {csvPreview.length === 0 && searchQuery && (
+                <div style={{ marginTop: '20px', color: 'red' }}>
+                    <p>No results found for "{searchQuery}".</p>
                 </div>
             )}
 
