@@ -1,0 +1,51 @@
+/* Container “card” */
+.upload-card {
+    max-width: 400px;
+    margin: 40px auto;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    background-color: #fff;
+  }
+  
+  /* Headline */
+  .upload-card h2 {
+    text-align: center;
+    margin-bottom: 24px;
+    font-size: 1.5rem;
+  }
+  
+  /* Form inputs */
+  .upload-card .form-input {
+    width: 100%;
+    padding: 10px 12px;
+    margin: 4px 0 16px 0;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+  
+  /* File input tweaks */
+  .upload-card .form-input[type="file"] {
+    padding: 4px 12px;
+  }
+  
+  /* Primary button */
+  .upload-card .btn {
+    width: 100%;
+    padding: 12px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  
+  /* Disabled button */
+  .upload-card .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  

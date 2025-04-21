@@ -1,72 +1,104 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import './FileUploadAndScrape.css';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-function FileUploadAndScrape() {
-    const [file, setFile] = useState(null);
-    const [jgiUsername, setJgiUsername] = useState('');
-    const [jgiPassword, setJgiPassword] = useState('');
-    const [message, setMessage] = useState('');
-    const [error, setError] = useState('');
+export default function FileUploadAndScrape() {
+  const [file, setFile]               = useState(null);
+  const [jgiUsername, setJgiUsername] = useState('');
+  const [jgiPassword, setJgiPassword] = useState('');
+  const [loading, setLoading]         = useState(false);
 
-    const handleFileChange = (e) => {
-        setFile(e.target.files[0]);
-    };
+  const handleFileChange = e => {
+    setFile(e.target.files[0]);
+  };
 
-    const handleUpload = async (e) => {
-        e.preventDefault();
+  const handleUpload = async e => {
+    e.preventDefault();
+    if (!file || !jgiUsername.trim() || !jgiPassword.trim()) {
+      toast.error('Please provide file, username, and password.');
+      return;
+    }
 
-        if (!file || !jgiUsername || !jgiPassword) {
-            setMessage('');
-            setError('Please provide all required fields: file, username, and password.');
-            return;
-        }
+    const formData = new FormData();
+    formData.append('csv_file', file);
+    formData.append('jgi_username', jgiUsername);
+    formData.append('jgi_password', jgiPassword);
 
-        const formData = new FormData();
-        formData.append('csv_file', file);
-        formData.append('jgi_username', jgiUsername);
-        formData.append('jgi_password', jgiPassword);
+    setLoading(true);
+    try {
+      const { data } = await axios.post(
+        'http://127.0.0.1:8000/api/upload-and-scrape/',
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      toast.success(data.message || 'File processed successfully!');
+      // reset
+      setFile(null);
+      setJgiUsername('');
+      setJgiPassword('');
+      e.target.reset();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'An error occurred during processing.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        try {
-            const response = await axios.post('http://127.0.0.1:8000/api/upload-and-scrape/', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
-            setMessage(response.data.message || 'File processed successfully.');
-            setError('');
-        } catch (err) {
-            setMessage('');
-            setError(err.response?.data?.error || 'An error occurred while processing the file.');
-        }
-    };
+  return (
+    <div className="upload-card">
+      <h2>Upload & Scrape</h2>
+      <form onSubmit={handleUpload}>
+        <label>
+          JGI Username
+          <input
+            type="text"
+            className="form-input"
+            placeholder="Enter your JGI username"
+            value={jgiUsername}
+            onChange={e => setJgiUsername(e.target.value)}
+            disabled={loading}
+            required
+          />
+        </label>
 
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <h2>Upload File for Scraping</h2>
-            <form onSubmit={handleUpload}>
-                <input
-                    type="text"
-                    placeholder="JGI Username"
-                    value={jgiUsername}
-                    onChange={(e) => setJgiUsername(e.target.value)}
-                    required
-                />
-                <input
-                    type="password"
-                    placeholder="JGI Password"
-                    value={jgiPassword}
-                    onChange={(e) => setJgiPassword(e.target.value)}
-                    required
-                />
-                <input type="file" onChange={handleFileChange} required />
-                <button type="submit" style={{ marginTop: '10px' }}>
-                    Upload and Scrape
-                </button>
-            </form>
-            {message && <p style={{ marginTop: '20px', color: 'green' }}>{message}</p>}
-            {error && <p style={{ marginTop: '20px', color: 'red' }}>{error}</p>}
-        </div>
-    );
+        <label>
+          JGI Password
+          <input
+            type="password"
+            className="form-input"
+            placeholder="Enter your JGI password"
+            value={jgiPassword}
+            onChange={e => setJgiPassword(e.target.value)}
+            disabled={loading}
+            required
+          />
+        </label>
+
+        <label>
+          CSV File
+          <input
+            type="file"
+            accept=".csv"
+            className="form-input"
+            onChange={handleFileChange}
+            disabled={loading}
+            required
+          />
+        </label>
+
+        <button
+          type="submit"
+          className="btn"
+          disabled={loading}
+        >
+          {loading ? 'Processing…' : 'Upload & Scrape'}
+        </button>
+      </form>
+
+      <ToastContainer position="top-right" autoClose={3000} />
+    </div>
+  );
 }
-
-export default FileUploadAndScrape;

@@ -62,7 +62,7 @@ def multiscrape_urls(urls):
 
 # Read URLs from the CSV file
 with open(csv_file_path, 'r') as csv_file:
-    csv_reader = csv.reader(csv_file)
+    csv_reader = csv.reader(csv_file, delimiter='\t')
     urls = [row[0] for row in csv_reader]
 
 multiscrape_urls(urls)
