@@ -9,6 +9,7 @@ import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
 import Layout from './components/Layout';
 import PastSweepsPage from './pages/PastSweepsPage';
+import UploadAndScrapePage from './pages/UploadAndScrapePage';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/sweeps" element={<PastSweepsPage />} />
+        <Route path="/upload-and-scrape" element={<UploadAndScrapePage />} />
       </Routes>
     </Layout>
   );

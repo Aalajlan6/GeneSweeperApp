@@ -15,23 +15,24 @@ function NavigationBar() {
   return (
     <nav className="navbar">
       <div className="nav-container">
-        <div className="brand">
-          <Link to="/" className="brand-link">
-          
-          GeneSweeper
-          </Link>
-        </div>
-        <ul className="nav-links">
-          <li><Link to="/">Home</Link></li>
+          <div className="brand">
+            <Link to="/" className="brand-link">
+            
+            GeneSweeper
+            </Link>
+          </div>
+          <ul className="nav-links">
+            <li><Link to="/">Home</Link></li>
 
           {isAuthenticated ? (
             <>
-              <li><Link to="/upload">Sweep</Link></li>
+              <li><Link to="/upload">Sweep!</Link></li>
               <li><Link to="/sweeps">Past Sweeps</Link></li>
+              <li><Link to="/upload-and-scrape">Upload and Scrape</Link></li>
               <li>
-                <button onClick={handleLogout} className="logout-button">
-                  Logout
-                </button>
+                  <button onClick={handleLogout} className="logout-button">
+                    Logout
+                  </button>
               </li>
             </>
           ) : (

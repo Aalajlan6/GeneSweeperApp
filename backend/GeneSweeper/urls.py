@@ -30,4 +30,6 @@ urlpatterns = [
     path('api/sweeps/', views.user_sweeps, name='user_sweeps'),
     path('api/save-sweep/', views.save_sweep, name='save_sweep'),
     path('api/sweeps/<int:sweep_id>/delete/', views.delete_sweep, name='delete_sweep'),
+    path('api/upload-and-scrape/', views.upload_and_scrape, name='upload_and_scrape'),
+    path('api/external-credentials/', views.get_external_credentials, name='get_external_credentials'),
 ]
