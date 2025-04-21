@@ -53,7 +53,7 @@ function PastSweepsPage() {
         <tbody>
           {filteredSweeps.map((sweep) => (
             <tr key={sweep.id}>
-              <td>{new Date(sweep.created_at).toLocaleString()}</td>
+              <td>{new Date(sweep.date).toLocaleString()}</td>
               <td>{sweep.products_selected}</td>
               <td>
                 <a href={`http://127.0.0.1:8000/media/${sweep.file_name}`} target="_blank" rel="noreferrer">
