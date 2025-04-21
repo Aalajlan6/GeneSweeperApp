@@ -28,6 +28,7 @@ function NavigationBar() {
             <li><Link to="/upload">Upload</Link></li>
             <li><Link to="/dashboard">Dashboard</Link></li>
             <li><button onClick={handleLogout}>Logout</button></li>
+            <li><Link to="/sweeps">Past Sweeps</Link></li>
           </>
         ) : (
           <>

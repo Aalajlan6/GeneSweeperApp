@@ -92,11 +92,28 @@ function UploadCSV() {
         .then(response => {
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
+            const name = `${cart.join('_').substring(0, 20)}.csv`
             link.href = url;
-            link.setAttribute('download', 'sweeped_products.csv');
+            link.setAttribute('download', name);
             document.body.appendChild(link);
             link.click();
             link.remove();
+
+            axios.post('http://127.0.0.1:8000/api/save-sweep/', {
+                products: cart,
+                name: name
+              }, {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+              })
+              .then(res => {
+                console.log('Sweep saved successfully:', res.data);
+              })
+              .catch(err => {
+                console.error('Error saving sweep:', err);
+              });
+
         })
         .catch(error => {
             console.error('Error exporting:', error);
