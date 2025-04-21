@@ -70,7 +70,10 @@ function UploadCSV() {
             )
         );
 
-        setCsvPreview(filtered.slice(0, 10)); // Update the preview with filtered rows (limit to 10)
+        // Avoid unnecessary state updates if the filtered data is the same
+        if (JSON.stringify(filtered.slice(0, 10)) !== JSON.stringify(csvPreview)) {
+            setCsvPreview(filtered.slice(0, 10)); // Update the preview with filtered rows (limit to 10)
+        }
     };
 
     const handleProductSelect = (e) => {
