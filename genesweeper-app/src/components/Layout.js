@@ -1,17 +1,18 @@
 // components/Layout.js
 import React from 'react';
 import Footer from './Footer';
-
+import NavigationBar from './NavigationBar';
+import './Layout.css';
 function Layout({ children }) {
   return (
-    <div>
+    <div className="layout">
       <header>
         <h1>GeneSweeper App</h1>
+        <NavigationBar />
       </header>
-      <main>
+      <main className="layout-main">
         {children}
       </main>
-
     </div>
   );
 }
