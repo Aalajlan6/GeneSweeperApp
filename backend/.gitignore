@@ -4,3 +4,4 @@ output.*
 *.fasta
 *.pyc
 
+db.sqlite3
