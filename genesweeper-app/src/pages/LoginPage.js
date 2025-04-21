@@ -36,7 +36,7 @@ function LoginPage() {
         setErrorMessage('');
 
         // Redirect to dashboard after login
-        navigate('/dashboard');
+        navigate('/home');
       })
       .catch((error) => {
         console.error('Login failed:', error);
