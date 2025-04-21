@@ -13,6 +13,13 @@
   }
 }
 
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden; /* Optional but nice to prevent horizontal scroll */
+}
+
 .App-header {
   background-color: #282c34;
   min-height: 100vh;

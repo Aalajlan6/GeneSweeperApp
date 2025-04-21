@@ -1,290 +1,325 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import Papa from 'papaparse';
+// src/components/UploadCSV.js
+import React, { useState, useMemo } from 'react';
+import { useDropzone }         from 'react-dropzone';
+import { ToastContainer, toast } from 'react-toastify';
+import Papa                    from 'papaparse';
+import axios                   from 'axios';
+import 'react-toastify/dist/ReactToastify.css';
 
-function UploadCSV() {
-    const [products, setProducts] = useState([]);
-    const [filteredProducts, setFilteredProducts] = useState([]);
-    const [cart, setCart] = useState([]);
-    const [file, setFile] = useState(null);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [csvData, setCsvData] = useState([]); // Full CSV data
-    const [csvPreview, setCsvPreview] = useState([]); // Filtered CSV preview
-    const [selectedProduct, setSelectedProduct] = useState(''); // State for the selected product
+export default function UploadCSV() {
+  const [file, setFile]               = useState(null);
+  const [csvData, setCsvData]         = useState([]);
+  const [products, setProducts]       = useState([]);
+  const [filteredProducts, setFiltered]= useState([]);
+  const [cart, setCart]               = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading]         = useState(false);
+  const [exporting, setExporting]     = useState(false);
 
-    const handleFileChange = (e) => {
-        const uploadedFile = e.target.files[0];
-        setFile(uploadedFile);
+  const notifySuccess = msg => toast.success(msg);
+  const notifyError   = msg => toast.error(msg);
 
-        // Parse the CSV file for preview
-        Papa.parse(uploadedFile, {
-            header: true, // Parse the CSV with headers
-            skipEmptyLines: true,
-            complete: (result) => {
-                setCsvData(result.data); // Store the full CSV data
-                setCsvPreview(result.data.slice(0, 10)); // Initially show the first 10 rows
-            },
-            error: (error) => {
-                console.error('Error parsing CSV:', error);
-            },
-        });
-    };
+  // Handle file drop/select
+  const handleFile = async f => {
+    setFile(f);
 
-    const handleUpload = (e) => {
-        e.preventDefault();
-        const formData = new FormData();
-        formData.append('csv_file', file);
+    // parse client‑side
+    Papa.parse(f, {
+      header: true, skipEmptyLines: true,
+      complete: r => setCsvData(r.data),
+      error: err => {
+        console.error(err);
+        notifyError('CSV parse failed');
+      },
+    });
 
-        axios.post('http://127.0.0.1:8000/api/upload-csv/', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        })
-        .then(response => {
-            setProducts(response.data.products);
-            setFilteredProducts(response.data.products);
-        })
-        .catch(error => {
-            console.error('Error uploading:', error);
-        });
-    };
+    // upload to backend
+    setLoading(true);
+    const form = new FormData();
+    form.append('csv_file', f);
+    try {
+      const { data } = await axios.post(
+        'http://127.0.0.1:8000/api/upload-csv/',
+        form,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      setProducts(data.products);
+      setFiltered(data.products);
+      notifySuccess('CSV uploaded!');
+    } catch (err) {
+      console.error(err);
+      notifyError('Upload failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const handleDownload = () => {
-        if (file) {
-            const url = URL.createObjectURL(file);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = file.name; // Use the original file name
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-    };
+  // find which CSV column matches your product IDs
+  const productKey = useMemo(() => {
+    if (!csvData.length || !cart.length) return null;
+    const headers = Object.keys(csvData[0]);
+    for (let h of headers) {
+      if (cart.some(item => csvData.some(row => row[h] === item))) {
+        return h;
+      }
+    }
+    return null;
+  }, [csvData, cart]);
 
-    const handleSearchChange = (e) => {
-        const query = e.target.value;
-        setSearchQuery(query);
+  // rows for export preview
+  const exportPreview = useMemo(() => {
+    if (!productKey) return [];
+    return csvData.filter(row => cart.includes(row[productKey]));
+  }, [csvData, cart, productKey]);
 
-        // Filter CSV data based on the search query
-        const filtered = csvData.filter(row =>
-            Object.values(row).some(value =>
-                value.toString().toLowerCase().includes(query.toLowerCase())
-            )
-        );
-
-        setCsvPreview(filtered.slice(0, 10)); // Update the preview with filtered rows (limit to 10)
-    };
-
-    const handleProductSelect = (e) => {
-        setSelectedProduct(e.target.value);
-    };
-
-    const handleAddToCart = () => {
-        if (selectedProduct && !cart.includes(selectedProduct)) {
-            setCart(prev => [...prev, selectedProduct]);
-        }
-    };
-
-    const handleRemoveFromCart = (item) => {
-        setCart(prev => prev.filter(product => product !== item));
-    };
-
-    const handleExport = () => {
-        const formData = new FormData();
-        cart.forEach(product => {
-            formData.append('products[]', product);
-        });
-
-        axios.post('http://127.0.0.1:8000/api/export-csv/', formData, {
-            responseType: 'blob'
-        })
-        .then(response => {
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            const name = `${cart.join('_').substring(0, 20)}.csv`
-            const date = new Date().toISOString().split('T')[0];
-            link.href = url;
-            link.setAttribute('download', name);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-
-            axios.post('http://127.0.0.1:8000/api/save-sweep/', {
-                products: cart,
-                name: name
-            }, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-                }
-            })
-            .then(res => {
-                console.log('Sweep saved successfully:', res.data);
-            })
-            .catch(err => {
-                console.error('Error saving sweep:', err);
-            });
-
-        })
-        .catch(error => {
-            console.error('Error exporting:', error);
-        });
-    };
-
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <form onSubmit={handleUpload}>
-                <input type="file" onChange={handleFileChange} accept=".csv" required />
-                <button type="submit">Upload CSV</button>
-            </form>
-
-            {/* Download Button */}
-            {file && (
-                <button
-                    onClick={handleDownload}
-                    style={{
-                        marginTop: '10px',
-                        padding: '10px 20px',
-                        backgroundColor: '#4CAF50',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '5px',
-                        cursor: 'pointer',
-                    }}
-                >
-                    Download CSV
-                </button>
-            )}
-
-            {/* Search Input */}
-            {csvData.length > 0 && (
-                <div style={{ marginTop: '20px', width: '80%' }}>
-                    <input
-                        type="text"
-                        placeholder="Search..."
-                        value={searchQuery}
-                        onChange={handleSearchChange}
-                        style={{
-                            width: '100%',
-                            padding: '10px',
-                            marginBottom: '10px',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px',
-                        }}
-                    />
-                </div>
-            )}
-
-            {/* CSV Preview Section */}
-            {csvPreview.length > 0 && (
-                <div
-                    style={{
-                        marginTop: '20px',
-                        width: '80%',
-                        maxWidth: '600px',
-                        overflowX: 'auto',
-                        border: '1px solid #ccc',
-                        borderRadius: '8px',
-                        padding: '10px',
-                        backgroundColor: '#f9f9f9',
-                    }}
-                >
-                    <h3 style={{ textAlign: 'center' }}>Table Preview</h3>
-                    <table
-                        border="1"
-                        style={{
-                            width: '100%',
-                            textAlign: 'left',
-                            borderCollapse: 'collapse',
-                            fontSize: '14px',
-                        }}
-                    >
-                        <thead>
-                            <tr>
-                                {Object.keys(csvPreview[0]).map((header, index) => (
-                                    <th
-                                        key={index}
-                                        style={{
-                                            padding: '8px',
-                                            backgroundColor: '#f2f2f2',
-                                            fontWeight: 'bold',
-                                        }}
-                                    >
-                                        {header}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {csvPreview.map((row, rowIndex) => (
-                                <tr key={rowIndex}>
-                                    {Object.values(row).map((value, colIndex) => (
-                                        <td key={colIndex} style={{ padding: '8px' }}>
-                                            {value}
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-
-            {csvPreview.length === 0 && searchQuery && (
-                <div style={{ marginTop: '20px', color: 'red' }}>
-                    <p>No results found for "{searchQuery}".</p>
-                </div>
-            )}
-
-            {products.length > 0 && (
-                <div style={{ marginTop: '20px', display: 'flex', gap: '40px' }}>
-                    {/* Left side: Products List */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <h3>Available Products</h3>
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            value={searchQuery}
-                            onChange={handleSearchChange}
-                            style={{ width: '200px', marginBottom: '10px' }}
-                        />
-                        <select
-                            size="10"
-                            style={{ width: '250px', height: '200px' }}
-                            onChange={handleProductSelect}
-                        >
-                            {filteredProducts.map((product, index) => (
-                                <option key={index} value={product}>
-                                    {product}
-                                </option>
-                            ))}
-                        </select>
-                        <button onClick={handleAddToCart} style={{ marginTop: '10px' }}>
-                            Add to Cart
-                        </button>
-                    </div>
-
-                    {/* Right side: Cart */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <h3>Cart</h3>
-                        <ul style={{ width: '300px', height: '200px', overflowY: 'auto', border: '1px solid black', padding: '5px' }}>
-                            {cart.map((item, index) => (
-                                <li key={index} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    {item}
-                                    <button
-                                        onClick={() => handleRemoveFromCart(item)}
-                                        style={{ marginTop: '10px', color: 'red' }}
-                                    >
-                                        Remove
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                        <button onClick={handleExport} style={{ marginTop: '10px' }}>
-                            Export Sweep
-                        </button>
-                    </div>
-                </div>
-            )}
-        </div>
+  // apply search filter on that preview
+  const filteredExport = useMemo(() => {
+    if (!searchQuery) return exportPreview;
+    return exportPreview.filter(row =>
+      Object.values(row).some(v =>
+        String(v).toLowerCase().includes(searchQuery.toLowerCase())
+      )
     );
+  }, [exportPreview, searchQuery]);
+
+  // export + download + save
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const form = new FormData();
+      cart.forEach(p => form.append('products[]', p));
+      const resp = await axios.post(
+        'http://127.0.0.1:8000/api/export-csv/',
+        form,
+        { responseType: 'blob' }
+      );
+
+      // trigger download
+      const blobUrl = window.URL.createObjectURL(new Blob([resp.data]));
+      const a = document.createElement('a');
+      const filename = `${cart.join('_').substring(0,20)}.csv`;
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      // record sweep
+      await axios.post(
+        'http://127.0.0.1:8000/api/save-sweep/',
+        { products: cart, name: filename },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` } }
+      );
+      notifySuccess('Sweep exported & saved!');
+    } catch (err) {
+      console.error(err);
+      notifyError('Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      {/* 1) Uploader */}
+      <div style={{ width: '80%', maxWidth: 600, marginTop: 20 }}>
+        <FileUploader onFile={handleFile} disabled={loading} />
+      </div>
+
+      {/* 2) Product Selector & Cart */}
+      {products.length > 0 && (
+        <div style={{ display: 'flex', gap: 40, marginTop: 30 }}>
+          <ProductSelector
+            items={filteredProducts}
+            cart={cart}
+            onAdd={p => setCart(c => [...c, p])}
+          />
+          <CartSummary
+            cart={cart}
+            onRemove={i => setCart(c => c.filter(x => x !== i))}
+            onExport={handleExport}
+            exporting={exporting}
+          />
+        </div>
+      )}
+
+      {/* 3) Export Preview with its own scrollable window */}
+      {exportPreview.length > 0 && (
+        <div style={{ marginTop: 30, width: '80%', maxWidth: 800 }}>
+          <input
+            type="text"
+            placeholder="Search export preview…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%',
+              padding: 8,
+              marginBottom: 10,
+              borderRadius: 5,
+              border: '1px solid #ccc'
+            }}
+          />
+          <h3 style={{ textAlign: 'center' }}>Export Preview</h3>
+
+          {/* scrollable container */}
+          <div
+            style={{
+              maxHeight: 300,         // limit its height
+              overflowY: 'auto',      // vertical scroll
+              overflowX: 'auto',      // horizontal scroll if needed
+              border: '1px solid #ccc',
+              borderRadius: 8,
+              padding: 10,
+              backgroundColor: '#f9f9f9'
+            }}
+          >
+            <CSVPreviewTable data={filteredExport} />
+          </div>
+
+          {filteredExport.length === 0 && searchQuery && (
+            <p style={{ color: 'red' }}>No results for “{searchQuery}”.</p>
+          )}
+        </div>
+      )}
+
+      <ToastContainer position="top-right" autoClose={3000} />
+    </div>
+  );
 }
 
-export default UploadCSV;
+
+// ─── INLINE SUBCOMPONENTS ───────────────────────────
+
+function FileUploader({ onFile, disabled }) {
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: '.csv',
+    onDrop: disabled ? () => {} : files => onFile(files[0]),
+  });
+  return (
+    <div
+      {...getRootProps()}
+      style={{
+        border: '2px dashed #bbb',
+        padding: 40,
+        textAlign: 'center',
+        borderRadius: 8,
+        background: isDragActive ? '#eef' : '#fafafa',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.6 : 1
+      }}
+    >
+      <input {...getInputProps()} disabled={disabled}/>
+      {disabled
+        ? 'Uploading…'
+        : isDragActive
+          ? 'Drop CSV here…'
+          : 'Drag & drop a CSV file here, or click to select'}
+    </div>
+  );
+}
+
+function CSVPreviewTable({ data }) {
+  if (!data.length) return null;
+  const headers = Object.keys(data[0]);
+  return (
+    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <thead>
+        <tr>
+          {headers.map((h,i)=>(
+            <th
+              key={i}
+              style={{
+                padding: 8,
+                border: '1px solid #ddd',
+                background: '#f2f2f2'
+              }}
+            >
+              {h}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {data.map((row,r)=>(
+          <tr key={r}>
+            {headers.map((h,c)=>(
+              <td key={c} style={{ padding: 8, border: '1px solid #ddd' }}>
+                {row[h]}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function ProductSelector({ items, cart, onAdd }) {
+  const [sel, setSel] = useState('');
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <h3>Available Products</h3>
+      <select
+        size={10}
+        style={{ width: 250, height: 200 }}
+        value={sel}
+        onChange={e => setSel(e.target.value)}
+      >
+        {items.map((it,i)=>(
+          <option key={i} value={it} disabled={cart.includes(it)}>
+            {it}
+          </option>
+        ))}
+      </select>
+      <br/>
+      <button
+        disabled={!sel}
+        onClick={()=>{ onAdd(sel); setSel(''); }}
+        style={{ marginTop: 10 }}
+      >
+        Add to Cart
+      </button>
+    </div>
+  );
+}
+
+function CartSummary({ cart, onRemove, onExport, exporting }) {
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <h3>Cart</h3>
+      <ul
+        style={{
+          width: 300,
+          height: 200,
+          overflowY: 'auto',
+          border: '1px solid #ccc',
+          padding: 5,
+          listStyle: 'none'
+        }}
+      >
+        {cart.map((item,i)=>(
+          <li
+            key={i}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: 4
+            }}
+          >
+            {item}
+            <button onClick={()=>onRemove(item)} style={{ color: 'red' }}>
+              ×
+            </button>
+          </li>
+        ))}
+      </ul>
+      <button
+        disabled={!cart.length || exporting}
+        onClick={onExport}
+        style={{ marginTop: 10 }}
+      >
+        {exporting ? 'Exporting…' : 'Export Sweep'}
+      </button>
+    </div>
+  );
+}

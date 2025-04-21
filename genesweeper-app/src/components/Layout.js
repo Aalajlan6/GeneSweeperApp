@@ -7,7 +7,6 @@ function Layout({ children }) {
   return (
     <div className="layout">
       <header>
-        <h1>GeneSweeper App</h1>
         <NavigationBar />
       </header>
       <main className="layout-main">
