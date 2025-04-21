@@ -29,4 +29,5 @@ urlpatterns = [
     path('api/register/', views.register_user, name='register_user'),
     path('api/sweeps/', views.user_sweeps, name='user_sweeps'),
     path('api/save-sweep/', views.save_sweep, name='save_sweep'),
+    path('api/sweeps/<int:sweep_id>/delete/', views.delete_sweep, name='delete_sweep'),
 ]

@@ -109,3 +109,13 @@ def save_sweep(request):
     )
 
     return Response({'message': 'Sweep saved successfully.'}, status=201)
+
+@api_view (['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_sweep(request, sweep_id):
+    try:
+        sweep = Sweep.objects.get(id=sweep_id, user=request.user)
+        sweep.delete()
+        return Response({'message': 'Sweep deleted successfully.'}, status=204)
+    except Sweep.DoesNotExist:
+        return Response({'error': 'Sweep not found.'}, status=404)
