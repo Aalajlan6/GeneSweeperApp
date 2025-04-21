@@ -5,6 +5,8 @@ import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import UploadPage from './pages/UploadPage';
 import DashboardPage from './pages/DashboardPage';
+import RegisterPage from './pages/RegisterPage';
+import LoginPage from './pages/LoginPage';
 import Layout from './components/Layout';
 
 function App() {
@@ -16,6 +18,8 @@ function App() {
         <Route path="/upload" element={<UploadPage />} />
         <Route path="*" element={<HomePage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={<LoginPage />} />
       </Routes>
     </Layout>
   );
