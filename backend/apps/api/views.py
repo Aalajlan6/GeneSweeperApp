@@ -137,19 +137,26 @@ def upload_and_scrape(request):
         if not uploaded_file or not jgi_username or not jgi_password:
             return JsonResponse({'error': 'Missing required fields.'}, status=400)
 
-        # Save file
         file_path = default_storage.save(f'uploads/{uploaded_file.name}', ContentFile(uploaded_file.read()))
         script_path = os.path.join(os.path.dirname(__file__), '../../resources/multiscraper.py')
         output_file_path = os.path.join(os.path.dirname(__file__), '../../resources/multioutput.fasta')
 
         try:
-            # Use Popen so we can terminate it later
             scraper_process = subprocess.Popen(
                 [sys.executable, script_path, file_path, jgi_username, jgi_password],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
             )
             stdout, stderr = scraper_process.communicate()
+
+            # 🛠️ YOUR DEBUG PRINTS
+            print("\n========= [SCRAPER STDOUT] =========")
+            print(stdout.decode())
+            print("========= [END STDOUT] =========\n")
+
+            print("\n========= [SCRAPER STDERR] =========")
+            print(stderr.decode())
+            print("========= [END STDERR] =========\n")
 
             if scraper_process.returncode != 0:
                 return JsonResponse({'error': f'Scraper failed:\n{stderr.decode()}'}, status=500)
@@ -161,9 +168,10 @@ def upload_and_scrape(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
         finally:
-            scraper_process = None  # Reset reference
+            scraper_process = None
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
 
 @csrf_exempt
 def abort_scraper(request):

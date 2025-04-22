@@ -3,5 +3,5 @@ config.json
 output.*
 *.fasta
 *.pyc
-
+*.csv
 db.sqlite3
