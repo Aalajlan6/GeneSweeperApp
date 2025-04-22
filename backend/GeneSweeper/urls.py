@@ -32,4 +32,6 @@ urlpatterns = [
     path('api/sweeps/<int:sweep_id>/delete/', views.delete_sweep, name='delete_sweep'),
     path('api/upload-and-scrape/', views.upload_and_scrape, name='upload_and_scrape'),
     path('api/external-credentials/', views.get_external_credentials, name='get_external_credentials'),
+    path('api/abort-scrape/', views.abort_scraper, name='abort_scraper'),
+
 ]

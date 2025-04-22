@@ -16,7 +16,7 @@ from rest_framework.permissions import IsAuthenticated
 import subprocess
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
-import sys
+import sys, subprocess
 
 uploaded_dataframes = {}
 
@@ -124,41 +124,55 @@ def delete_sweep(request, sweep_id):
     except Sweep.DoesNotExist:
         return Response({'error': 'Sweep not found.'}, status=404)
 
+scraper_process = None  # Store the process globally
+
 @csrf_exempt
 def upload_and_scrape(request):
+    global scraper_process
     if request.method == 'POST':
         uploaded_file = request.FILES.get('csv_file')
         jgi_username = request.POST.get('jgi_username')
         jgi_password = request.POST.get('jgi_password')
 
         if not uploaded_file or not jgi_username or not jgi_password:
-            return JsonResponse({'error': 'Missing required fields: file, username, or password.'}, status=400)
+            return JsonResponse({'error': 'Missing required fields.'}, status=400)
 
-        # Save the uploaded file
+        # Save file
         file_path = default_storage.save(f'uploads/{uploaded_file.name}', ContentFile(uploaded_file.read()))
-
-        # Get the absolute path to multiscraper.py
         script_path = os.path.join(os.path.dirname(__file__), '../../resources/multiscraper.py')
-
-        # Define the output file path
         output_file_path = os.path.join(os.path.dirname(__file__), '../../resources/multioutput.fasta')
 
-        # Run multiscraper.py using the current Python interpreter
         try:
-            subprocess.run(
+            # Use Popen so we can terminate it later
+            scraper_process = subprocess.Popen(
                 [sys.executable, script_path, file_path, jgi_username, jgi_password],
-                check=True
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
             )
-        except subprocess.CalledProcessError as e:
-            return JsonResponse({'error': f'Error running multiscraper: {str(e)}'}, status=500)
+            stdout, stderr = scraper_process.communicate()
 
-        # Return the output file as a downloadable response
-        if os.path.exists(output_file_path):
-            return FileResponse(open(output_file_path, 'rb'), as_attachment=True, filename='multioutput.fasta')
-        else:
-            return JsonResponse({'error': 'Output file not found.'}, status=500)
+            if scraper_process.returncode != 0:
+                return JsonResponse({'error': f'Scraper failed:\n{stderr.decode()}'}, status=500)
+
+            if os.path.exists(output_file_path):
+                return FileResponse(open(output_file_path, 'rb'), as_attachment=True, filename='multioutput.fasta')
+            else:
+                return JsonResponse({'error': 'Output file not found.'}, status=500)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+        finally:
+            scraper_process = None  # Reset reference
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+@csrf_exempt
+def abort_scraper(request):
+    global scraper_process
+    if scraper_process and scraper_process.poll() is None:
+        scraper_process.terminate()
+        scraper_process = None
+        return JsonResponse({'message': 'Scraping aborted.'})
+    return JsonResponse({'message': 'No running process.'})
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

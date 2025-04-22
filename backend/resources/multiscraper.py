@@ -4,7 +4,7 @@ import csv
 import sys
 import os
 
-# Get the CSV file path and JGI credentials from the command-line arguments
+# Check arguments
 if len(sys.argv) < 4:
     print("Usage: python multiscraper.py <csv_file_path> <jgi_username> <jgi_password>")
     sys.exit(1)
@@ -13,33 +13,50 @@ csv_file_path = sys.argv[1]
 jgi_username = sys.argv[2]
 jgi_password = sys.argv[3]
 
-# Define URLs and login credentials
+# Configs
 login_url = 'https://signon.jgi.doe.gov/signon/create'
 output_file_path = os.path.join(os.path.dirname(__file__), 'multioutput.fasta')
 div_id = 'content_other'
 
-# Create a session object to persist cookies and login info
+# Create a session object
 session = requests.Session()
 
-# Data payload for the login form
+# Login payload
 login_data = {
     'login': jgi_username,
     'password': jgi_password,
 }
 
-# Send the login request
+# Send login request
 login_response = session.post(login_url, data=login_data)
 
-# Check if login was successful
 if login_response.ok:
     print("Login successful!")
 else:
     print("Login failed.")
     sys.exit(1)
 
-# Function to scrape a URL
+# 🔥 Function to generate the correct list of URLs
+def linkGen(csv_path):
+    urls = []
+    with open(csv_path, 'r') as f:
+        reader = csv.reader(f)
+        next(reader)  # Skip header
+        for row in reader:
+            try:
+                print("[DEBUG] Raw row:", row)
+                id_field, _, ga_field = row[0].split()[:3]
+                print("[DEBUG] Parsed fields:", id_field, ga_field)
+                url = f"https://img.jgi.doe.gov/cgi-bin/mer/main.cgi?section=MetaGeneDetail&page=genePageMainFaa&taxon_oid={id_field}&data_type=assembled&gene_oid={ga_field}"
+                urls.append(url)
+            except Exception as e:
+                print(f"[DEBUG] Error parsing row: {row} — {e}")
+    return urls
+
+# Function to scrape one URL
 def scrape_url(url):
     try:
+        print(f"[DEBUG] Scraping URL: {url}")
         page_response = session.get(url)
         page_response.raise_for_status()
         soup = BeautifulSoup(page_response.text, 'html.parser')
@@ -56,13 +73,11 @@ def scrape_url(url):
 # Function to scrape multiple URLs
 def multiscrape_urls(urls):
     with open(output_file_path, 'w') as output_file:
-        for url in urls:
+        for i, url in enumerate(urls):
+            print(f"[{i+1}/{len(urls)}] Scraping: {url}")
             output_file.write(scrape_url(url))
     print("Scraping completed.")
 
-# Read URLs from the CSV file
-with open(csv_file_path, 'r') as csv_file:
-    csv_reader = csv.reader(csv_file, delimiter='\t')
-    urls = [row[0] for row in csv_reader]
-
+# 🔥 Now generate correct URLs, then scrape them
+urls = linkGen(csv_file_path)
 multiscrape_urls(urls)
